@@ -19,6 +19,7 @@ from app.agents.intent_classifier import classify_intent, IntentResult
 from app.agents.project_agent import ProjectAgent
 from app.agents.developer_agent import DeveloperAgent
 from app.agents.incident_agent import IncidentAgent
+from app.knowledge.rag_service import RagService
 from app.memory.conversation_memory import ConversationMemory
 from app.models.entities import Role
 from app.rbac.permissions import agent_allowed_permissions, Permission
@@ -139,6 +140,15 @@ class CoordinatorAgent:
                 f"{result.recommendation}"
             )
             return answer, [e.__dict__ for e in result.evidence]
+
+        if intent.domain == "general" and intent.intent in {"query", "search", "summarize"}:
+            rag = RagService(self.db)
+            result = rag.query(message, project_id=project_id)
+            evidence = [
+                {"type": "fact", "source": "document", "id": s.chunk_id, "detail": f"{s.document_title} (score {s.score})"}
+                for s in result.sources
+            ]
+            return result.answer, evidence
 
         return "I understood your request but no specialized agent is wired up for this yet.", []
 
