@@ -5,7 +5,10 @@ from app.config import settings
 from app.database import Base, engine
 from app import models  # noqa: F401  - ensures models are registered on Base.metadata
 from app import integrations  # noqa: F401  - triggers adapter self-registration
-from app.api import routes_chat, routes_integrations, routes_projects, routes_health, routes_actions, routes_knowledge
+from app.api import (
+    routes_chat, routes_integrations, routes_projects, routes_health,
+    routes_actions, routes_knowledge, routes_predictions, routes_events,
+)
 
 app = FastAPI(title=settings.app_name)
 
@@ -31,3 +34,5 @@ app.include_router(routes_projects.router)
 app.include_router(routes_actions.router)
 app.include_router(routes_actions.audit_router)
 app.include_router(routes_knowledge.router)
+app.include_router(routes_predictions.router)
+app.include_router(routes_events.router)
