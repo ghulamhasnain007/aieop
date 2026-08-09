@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.config.database import get_db
 from app.intelligence.predictive import SprintRiskPredictor
 
 router = APIRouter(prefix="/api/predictions", tags=["predictions"])

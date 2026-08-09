@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.config.database import get_db
 from app.intelligence.timeline import TimelineReconstructor
 from app.intelligence.dependencies import DependencyAnalyzer
 from app.intelligence.tech_debt import TechDebtDetector

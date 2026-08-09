@@ -10,9 +10,9 @@ from alembic import context
 # Make `app.*` importable when alembic is run from the backend/ directory.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.database import Base  # noqa: E402
+from app.config.database import Base  # noqa: E402
 from app import models  # noqa: E402,F401 - registers all entity tables on Base.metadata
-from app.config import settings  # noqa: E402
+from app.config.config import settings  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

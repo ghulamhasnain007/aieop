@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import settings
-from app.database import Base, engine
+from app.config.config import settings
+from app.config.database import Base, engine
 from app import models  # noqa: F401  - ensures models are registered on Base.metadata
 from app import integrations  # noqa: F401  - triggers adapter self-registration
 from app.api import (

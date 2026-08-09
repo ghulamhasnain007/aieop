@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.config.database import get_db
 from app.events.proactive_detection import ProactiveDetectionEngine
 
 router = APIRouter(prefix="/api/events", tags=["events"])
