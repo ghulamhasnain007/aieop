@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.config.database import get_db
 from app.models.entities import Project
 from app.schemas.common import ProjectCreate
 from app.intelligence.health_score import ProjectHealthScorer
