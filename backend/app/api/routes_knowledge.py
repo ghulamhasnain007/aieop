@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.config.database import get_db
 from app.knowledge.rag_service import RagService
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])

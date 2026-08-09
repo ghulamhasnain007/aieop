@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from app.config import settings
+from app.config.config import settings
 from app.integrations.base import BaseIntegration, HealthStatus, NormalizedEvent, IntegrationError
 
 
