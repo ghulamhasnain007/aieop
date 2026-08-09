@@ -44,7 +44,7 @@ class GitHubAdapter(BaseIntegration):
 
     def retrieve(self, resource: str, **filters) -> list[dict[str, Any]]:
         """
-        resource: "pull_requests" | "commits" | "repository"
+        resource: "pull_requests" | "commits" | "repository" | "workflow_runs"
         filters must include repo="owner/name"
         """
         repo = filters.get("repo")
@@ -70,6 +70,15 @@ class GitHubAdapter(BaseIntegration):
                 resp = httpx.get(f"{self.API_BASE}/repos/{repo}", headers=self._headers(), timeout=15)
                 resp.raise_for_status()
                 return [resp.json()]
+            elif resource == "workflow_runs":
+                resp = httpx.get(
+                    f"{self.API_BASE}/repos/{repo}/actions/runs",
+                    headers=self._headers(),
+                    params={"per_page": filters.get("limit", 20)},
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                return resp.json().get("workflow_runs", [])
             else:
                 raise IntegrationError(f"Unknown resource '{resource}' for GitHubAdapter")
 
@@ -81,7 +90,17 @@ class GitHubAdapter(BaseIntegration):
     def normalize(self, raw_objects: list[dict[str, Any]]) -> list[dict[str, Any]]:
         normalized = []
         for obj in raw_objects:
-            if "commit" in obj and "sha" in obj:  # commit object
+            if "workflow_id" in obj:  # GitHub Actions workflow run -> Build (FR-005)
+                normalized.append({
+                    "entity_type": "build",
+                    "external_id": str(obj["id"]),
+                    "status": {"success": "passed", "failure": "failed", "cancelled": "failed"}
+                               .get(obj.get("conclusion"), obj.get("status")),
+                    "started_at": obj.get("run_started_at"),
+                    "finished_at": obj.get("updated_at"),
+                    "commit_sha": (obj.get("head_commit") or {}).get("id") or obj.get("head_sha"),
+                })
+            elif "commit" in obj and "sha" in obj:  # commit object
                 normalized.append({
                     "entity_type": "commit",
                     "external_id": obj["sha"],
@@ -133,6 +152,19 @@ class GitHubAdapter(BaseIntegration):
             )
             resp.raise_for_status()
             return resp.json()
+
+        if action_type == "trigger_ci":
+            repo = payload["repo"]
+            workflow_id = payload["workflow_id"]  # filename (e.g. "ci.yml") or numeric id
+            resp = httpx.post(
+                f"{self.API_BASE}/repos/{repo}/actions/workflows/{workflow_id}/dispatches",
+                headers=self._headers(),
+                json={"ref": payload.get("ref", "main")},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            # GitHub returns 204 with no body on success
+            return {"status": "dispatched", "repo": repo, "workflow_id": workflow_id}
 
         raise IntegrationError(f"Unsupported GitHub action: {action_type}")
 
