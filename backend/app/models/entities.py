@@ -17,7 +17,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.config.database import Base
 
 
 def gen_id() -> str:

@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.config.database import get_db
 from app.agents.coordinator import CoordinatorAgent
 from app.memory.conversation_memory import ConversationMemory
 from app.schemas.common import ChatRequest, ChatResponse
 from app.api.deps import get_current_role
-from app.config import settings
+from app.config.config import settings
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
