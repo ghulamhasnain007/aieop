@@ -14,7 +14,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import Issue, PullRequest, Commit, Deployment, Incident, Build
+from app.models.entities import Issue, PullRequest, Commit, Deployment, Incident, Build, Repository, Service
 
 
 @dataclass
@@ -124,4 +124,14 @@ class RiskDetector:
         return signals
 
     def all_risks(self, project_id: str) -> list[RiskSignal]:
-        return self.project_risks(project_id) + self.incident_risks(project_id)
+        signals = self.project_risks(project_id) + self.incident_risks(project_id)
+
+        repos = self.db.query(Repository).filter(Repository.project_id == project_id).all()
+        for repo in repos:
+            signals.extend(self.code_risks(repo.id))
+
+        services = self.db.query(Service).filter(Service.project_id == project_id).all()
+        for service in services:
+            signals.extend(self.deployment_risks(service.id))
+
+        return signals
