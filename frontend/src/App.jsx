@@ -2,11 +2,19 @@ import { useState } from "react";
 import ChatPanel from "./components/ChatPanel.jsx";
 import IntegrationHealth from "./components/IntegrationHealth.jsx";
 import ApprovalCenter from "./components/ApprovalCenter.jsx";
+import Overview from "./components/Overview.jsx";
+import KnowledgeBase from "./components/KnowledgeBase.jsx";
+import Incidents from "./components/Incidents.jsx";
+import ProjectSwitcher from "./components/ProjectSwitcher.jsx";
+import { useAppState } from "./context/AppStateContext.jsx";
 
 const NAV = [
-  { id: "chat", label: "Chat" },
-  { id: "approvals", label: "Approvals" },
-  { id: "integrations", label: "Integrations" },
+  { id: "overview", label: "Overview", title: "Project Overview", subtitle: "health score & risk signals" },
+  { id: "chat", label: "Chat", title: "Coordinator", subtitle: "natural-language interface" },
+  { id: "incidents", label: "Incidents", title: "Incident Center", subtitle: "timeline, dependencies, tech debt" },
+  { id: "knowledge", label: "Knowledge Base", title: "Knowledge Base", subtitle: "RAG-grounded document search" },
+  { id: "approvals", label: "Approvals", title: "Approval Center", subtitle: "human-in-the-loop actions" },
+  { id: "integrations", label: "Integrations", title: "Integration health", subtitle: "adapter connectivity" },
 ];
 
 const ROLES = [
@@ -14,9 +22,20 @@ const ROLES = [
   "developer", "qa_engineer", "devops_engineer", "viewer",
 ];
 
+const PANELS = {
+  overview: Overview,
+  chat: ChatPanel,
+  incidents: Incidents,
+  knowledge: KnowledgeBase,
+  approvals: ApprovalCenter,
+  integrations: IntegrationHealth,
+};
+
 export default function App() {
-  const [view, setView] = useState("chat");
-  const [role, setRole] = useState("developer");
+  const [view, setView] = useState("overview");
+  const { role, setRole } = useAppState();
+  const current = NAV.find((n) => n.id === view);
+  const Panel = PANELS[view];
 
   return (
     <div className="app-shell">
@@ -39,32 +58,27 @@ export default function App() {
         ))}
 
         <div className="sidebar-footer">
-          Phase 1–4 slice · v0.1
+          All 6 phases · v1.0
         </div>
       </aside>
 
       <main className="main">
         <div className="topbar">
           <div className="topbar-title">
-            {view === "chat" ? "Coordinator" : view === "approvals" ? "Approval Center" : "Integration health"}
-            <span>
-              {view === "chat"
-                ? "natural-language interface"
-                : view === "approvals"
-                ? "human-in-the-loop actions"
-                : "adapter connectivity"}
-            </span>
+            {current.title}
+            <span>{current.subtitle}</span>
           </div>
-          <select className="role-select" value={role} onChange={(e) => setRole(e.target.value)}>
-            {ROLES.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+          <div className="topbar-controls">
+            <ProjectSwitcher />
+            <select className="role-select" value={role} onChange={(e) => setRole(e.target.value)}>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {view === "chat" && <ChatPanel projectId={null} role={role} />}
-        {view === "approvals" && <ApprovalCenter role={role} />}
-        {view === "integrations" && <IntegrationHealth />}
+        <Panel />
       </main>
     </div>
   );

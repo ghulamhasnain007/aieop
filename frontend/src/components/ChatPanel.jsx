@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import EvidenceTrail from "./EvidenceTrail.jsx";
+import { useAppState } from "../context/AppStateContext.jsx";
 
 const SUGGESTIONS = [
   "Will we finish sprint 14?",
@@ -7,7 +8,8 @@ const SUGGESTIONS = [
   "What changed in the auth repository?",
 ];
 
-export default function ChatPanel({ projectId, role }) {
+export default function ChatPanel() {
+  const { projectId, role } = useAppState();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

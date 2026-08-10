@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useAppState } from "../context/AppStateContext.jsx";
 
 const RISK_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
-export default function ApprovalCenter({ role }) {
+export default function ApprovalCenter() {
+  const { role } = useAppState();
   const [pending, setPending] = useState([]);
   const [audit, setAudit] = useState([]);
   const [loading, setLoading] = useState(true);
