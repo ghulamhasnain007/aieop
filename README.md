@@ -56,19 +56,25 @@ dashboard.
   medium/high-risk actions queue for human approval; every outcome (success,
   failure, rejection, denial) is written to a complete audit trail.
 
-**Dashboard** — chat interface with an evidence-trail visualization, an
-Approval Center, and an integration health panel.
+**Dashboard** — six panels wired to the backend: Overview (health score + risk
+signals), Chat, Incidents (list → click for the full timeline reconstruction,
+dependency blast-radius, and technical debt signal), Knowledge Base (ingest +
+grounded query), Approval Center, and Integration health. A "Load demo data"
+button in the top bar seeds one realistic, fully interconnected scenario —
+a 4-service dependency chain, a live investigated incident, a sprint in
+progress, and a runbook — so a first-time visitor sees a working product
+immediately instead of an empty database.
 
-**68/68 backend tests pass** (`pytest`). Frontend builds cleanly (`npm run build`).
+**70/70 backend tests pass** (`pytest`). Frontend builds cleanly (`npm run build`).
 
 ## What's still not built
 
-- Timeline/Dependencies/Tech-debt panels aren't in the dashboard UI yet
-  (the APIs exist and are tested — `GET /api/incidents/{id}/timeline`,
-  `GET /api/services/{id}/dependencies`, `GET /api/services/{id}/tech-debt`).
 - Global engineering search (FR-035) and full report generation (FR-029) —
   explicitly deprioritized in the project plan.
 - Notification management/preferences UI (FR-028).
+- A real login screen — JWT auth is fully implemented and tested
+  (`POST /api/auth/register|login`, `GET /api/auth/me`), but the dashboard
+  still uses a role dropdown for convenience rather than a login form.
 - Deployment to a real host (Render/Railway) — deliberately not done yet.
 
 ## Running it
@@ -132,48 +138,26 @@ alembic downgrade base    # roll all the way back (tested, works cleanly)
 targets whatever database your `.env`/environment points at (SQLite locally,
 Postgres in docker-compose) — no separate config to keep in sync.
 
-## Trying the incident-investigation demo scenario by hand
+## Trying it out
 
-```bash
-cd backend
-python3 - <<'PY'
-from datetime import datetime, timedelta
-from app.database import SessionLocal, Base, engine
-from app.models.entities import Project, Service, Repository, Commit, Build, Deployment, Alert
+The fastest way to see the whole system working: start it (Docker or
+local, see below), open the dashboard, and click **"Load demo data"** in
+the top bar. That seeds one realistic scenario — a 4-service dependency
+chain, a live investigated incident (95% root-cause confidence), a sprint
+in progress, and a runbook — and every panel immediately has real data to
+show. From there:
 
-Base.metadata.create_all(bind=engine)
-db = SessionLocal()
+- **Overview** — see the computed health score and risk signals
+- **Incidents** — click the seeded incident to see its full timeline,
+  what would be affected if the service failed, and any tech-debt signal
+- **Knowledge Base** — ask *"what should I do about payment timeouts?"*
+  and get a grounded answer citing the seeded runbook
+- **Chat** — ask *"will we finish sprint 14?"* or *"why did the payment
+  service fail?"*
 
-project = Project(name="Payments Platform"); db.add(project); db.commit(); db.refresh(project)
-service = Service(project_id=project.id, name="payment-service", owner="ahmed")
-db.add(service); db.commit(); db.refresh(service)
-repo = Repository(project_id=project.id, provider="github", external_id="org/payments", name="payments")
-db.add(repo); db.commit(); db.refresh(repo)
-commit = Commit(repository_id=repo.id, sha="abc123def456", author="ahmed",
-                 message="Change token expiration handling", committed_at=datetime.utcnow()-timedelta(hours=1))
-db.add(commit); db.commit(); db.refresh(commit)
-build = Build(repository_id=repo.id, provider="github_actions", external_id="run-382",
-              status="passed", triggered_by_commit_id=commit.id)
-db.add(build); db.commit(); db.refresh(build)
-deploy_time = datetime.utcnow() - timedelta(minutes=40)
-deployment = Deployment(service_id=service.id, build_id=build.id, environment="production",
-                         status="completed", deployed_at=deploy_time)
-db.add(deployment); db.commit(); db.refresh(deployment)
-alert = Alert(service_id=service.id, source="simulated", severity="critical",
-              message="Error rate for payment-service exceeded 5% threshold",
-              triggered_at=deploy_time + timedelta(minutes=3))
-db.add(alert); db.commit()
-
-print("SERVICE_ID:", service.id)
-PY
-```
-
-Then either ask the chat interface *"why did the payment service fail?
-service: <SERVICE_ID>"*, or trigger it with no user involved at all:
-
-```bash
-curl -X POST localhost:8000/api/events/evaluate-service/<SERVICE_ID>
-```
+To reproduce the same scenario by hand instead (e.g. to see the raw API
+calls), the seed logic lives in `backend/app/demo/seed.py` and is also
+exposed as `POST /api/demo/seed`.
 
 ## Project layout
 
@@ -201,16 +185,22 @@ backend/
       tech_debt.py                 FR-039
     events/proactive_detection.py  FR-026/027
     actions/service.py               approval workflow + audit log (FR-020-024)
+    demo/seed.py                      one-click demo data (interconnected scenario)
     memory/conversation_memory.py
     api/                          FastAPI routers
-  tests/                          pytest suite (68 tests)
+  tests/                          pytest suite (70 tests)
 frontend/
   src/
     App.jsx                       sidebar + view routing
+    context/AppStateContext.jsx    shared project selection + role, across all panels
     components/
-      ChatPanel.jsx                natural-language interface
-      EvidenceTrail.jsx             fact/hypothesis evidence chain visualization
-      ApprovalCenter.jsx             human-in-the-loop actions + audit trail
+      Overview.jsx                  health score + risk signals
+      ChatPanel.jsx                  natural-language interface
+      Incidents.jsx                  list + timeline + dependencies + tech debt
+      KnowledgeBase.jsx               document ingestion + grounded RAG query
+      ApprovalCenter.jsx              human-in-the-loop actions + audit trail
       IntegrationHealth.jsx
+      ProjectSwitcher.jsx             project picker + demo seed + quick create
+      EvidenceTrail.jsx               fact/hypothesis evidence chain visualization
 docker-compose.yml
 ```
