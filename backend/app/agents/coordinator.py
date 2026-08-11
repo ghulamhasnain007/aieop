@@ -20,6 +20,7 @@ from app.agents.project_agent import ProjectAgent
 from app.agents.developer_agent import DeveloperAgent
 from app.agents.incident_agent import IncidentAgent
 from app.knowledge.rag_service import RagService
+from app.llm.narrate import narrate_root_cause
 from app.memory.conversation_memory import ConversationMemory
 from app.models.entities import Role
 from app.rbac.permissions import agent_allowed_permissions, Permission
@@ -135,7 +136,8 @@ class CoordinatorAgent:
             if result.insufficient_evidence:
                 return result.recommendation or "Insufficient evidence to determine a root cause.", \
                     [e.__dict__ for e in result.evidence]
-            answer = (
+            narrated = narrate_root_cause(result)
+            answer = narrated or (
                 f"Likely cause: {result.likely_cause} (confidence: {int(result.confidence * 100)}%). "
                 f"{result.recommendation}"
             )

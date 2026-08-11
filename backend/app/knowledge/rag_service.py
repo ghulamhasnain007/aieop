@@ -5,13 +5,12 @@ Pipeline exactly as specified:
 
     Question -> Embedding -> Vector Search -> Relevant Documents -> LLM -> Evidence-backed Answer
 
-The retrieval half (chunking, embedding, vector search) is fully
-implemented and real. The generation half is intentionally NOT an LLM
-call yet - `synthesize_answer()` is a clearly-marked extractive stand-in
-(concatenates the top-matching chunks) so the whole pipeline is runnable
-and testable without an API key. Swap that one function for an LLM call
-(prompt = question + retrieved chunks) when you wire up Gemini/LangChain;
-nothing else in this module needs to change.
+The retrieval half (chunking, embedding, vector search) is real. The
+generation half calls Claude (see app.llm.client), strictly grounded on
+the retrieved excerpts - the prompt explicitly forbids outside knowledge.
+Without an ANTHROPIC_API_KEY configured, `synthesize_answer()` falls back
+to returning the best-matching excerpt verbatim rather than failing, so
+the platform stays fully functional (just less fluent) without a key.
 
 Chunking is intentionally simple (paragraph-based, capped length) - good
 enough for architecture docs/runbooks at FYP scale. Swap for a
@@ -25,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.knowledge.embeddings import embed_text, cosine_similarity
 from app.models.entities import Document, DocumentChunk
+from app.llm.client import generate, is_configured, LLMError
 
 MAX_CHUNK_CHARS = 800
 
@@ -122,13 +122,28 @@ class RagService:
 
     def synthesize_answer(self, question: str, chunks: list[RetrievedChunk]) -> str:
         """
-        EXTRACTIVE STAND-IN for the LLM generation step. Returns the
-        single most relevant chunk verbatim with an explicit pointer to
-        its source, rather than a fabricated synthesis - this keeps the
-        pipeline honest (FR-032) while the real LLM call isn't wired up.
-        Replace this method's body with an LLM call once you have an API
-        key; keep the RagResult contract the same.
+        Uses the LLM when configured, grounded strictly on the retrieved
+        excerpts (never on outside knowledge) - falls back to an extractive
+        excerpt if no API key is set or the call fails, so the pipeline
+        never breaks over an LLM hiccup.
         """
+        if is_configured():
+            try:
+                return self._llm_synthesize(question, chunks)
+            except LLMError:
+                pass  # fall through to the extractive path below
+
         best = chunks[0]
         excerpt = best.content if len(best.content) <= 400 else best.content[:400].rsplit(" ", 1)[0] + "…"
         return f"From '{best.document_title}': {excerpt}"
+
+    def _llm_synthesize(self, question: str, chunks: list[RetrievedChunk]) -> str:
+        excerpts = "\n\n".join(f"[{c.document_title}]\n{c.content}" for c in chunks)
+        system = (
+            "You answer engineering questions using ONLY the document excerpts provided below. "
+            "Do not use any outside knowledge, and do not invent details not present in the "
+            "excerpts. If the excerpts don't fully answer the question, say explicitly what's "
+            "missing. Keep the answer to 2-4 sentences and mention which document it draws from."
+        )
+        user = f"Question: {question}\n\nExcerpts:\n{excerpts}"
+        return generate(system, user, max_tokens=300)

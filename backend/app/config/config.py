@@ -21,12 +21,14 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 12
 
-    # External integrations - all optional; adapters degrade gracefully if unset
+    # GitHub - the sole external integration (see project decision: GitHub-only focus)
     github_token: str | None = None
-    taiga_base_url: str | None = None
-    taiga_username: str | None = None
-    taiga_password: str | None = None
-    discord_bot_token: str | None = None
+
+    # LLM (Anthropic) - optional. Without a key, the platform still works:
+    # RAG falls back to extractive excerpts and agent answers fall back to
+    # their deterministic templates. See app.llm.client for the fallback logic.
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-sonnet-5"
 
     # Agent behaviour
     max_agent_loop_iterations: int = 8
