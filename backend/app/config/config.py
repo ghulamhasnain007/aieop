@@ -24,11 +24,14 @@ class Settings(BaseSettings):
     # GitHub - the sole external integration (see project decision: GitHub-only focus)
     github_token: str | None = None
 
-    # LLM (Anthropic) - optional. Without a key, the platform still works:
-    # RAG falls back to extractive excerpts and agent answers fall back to
-    # their deterministic templates. See app.llm.client for the fallback logic.
-    anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-sonnet-5"
+    # LLM (provider-agnostic) - optional. Without a key, the platform still
+    # works: RAG falls back to extractive excerpts and incident root-cause
+    # explanations fall back to a plain template. Defaults to Gemini since
+    # it has a generous free tier - swap providers by changing
+    # LLM_PROVIDER, no code changes needed. See app.llm.client.
+    llm_provider: str = "gemini"  # "gemini" | "anthropic"
+    llm_api_key: str | None = None
+    llm_model: str | None = None  # unset -> provider's own sensible default
 
     # Agent behaviour
     max_agent_loop_iterations: int = 8

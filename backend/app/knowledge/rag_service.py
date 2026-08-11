@@ -24,7 +24,8 @@ from sqlalchemy.orm import Session
 
 from app.knowledge.embeddings import embed_text, cosine_similarity
 from app.models.entities import Document, DocumentChunk
-from app.llm.client import generate, is_configured, LLMError
+from app.llm.client import generate, is_configured
+from app.llm.errors import LLMError
 
 MAX_CHUNK_CHARS = 800
 

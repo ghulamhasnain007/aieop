@@ -15,7 +15,8 @@ string, exactly like app.knowledge.rag_service does.
 """
 from __future__ import annotations
 
-from app.llm.client import generate, is_configured, LLMError
+from app.llm.client import generate, is_configured
+from app.llm.errors import LLMError
 
 
 def narrate_root_cause(result) -> str | None:

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 
 def test_rag_falls_back_to_extractive_without_api_key(db_session, monkeypatch):
-    monkeypatch.setattr(llm_client.settings, "anthropic_api_key", None)
+    monkeypatch.setattr(llm_client.settings, "llm_api_key", None)
     service = RagService(db_session)
     service.ingest_document(title="Runbook", content="Restart the service to clear the connection pool.")
 
@@ -20,7 +20,7 @@ def test_rag_falls_back_to_extractive_without_api_key(db_session, monkeypatch):
 
 
 def test_rag_uses_llm_when_configured(db_session, monkeypatch):
-    monkeypatch.setattr(llm_client.settings, "anthropic_api_key", "sk-test")
+    monkeypatch.setattr(llm_client.settings, "llm_api_key", "sk-test")
     service = RagService(db_session)
     service.ingest_document(title="Runbook", content="Restart the service to clear the connection pool.")
 
@@ -33,7 +33,7 @@ def test_rag_uses_llm_when_configured(db_session, monkeypatch):
 
 def test_rag_falls_back_if_llm_call_fails(db_session, monkeypatch):
     from app.llm.client import LLMError
-    monkeypatch.setattr(llm_client.settings, "anthropic_api_key", "sk-test")
+    monkeypatch.setattr(llm_client.settings, "llm_api_key", "sk-test")
     service = RagService(db_session)
     service.ingest_document(title="Runbook", content="Restart the service to clear the connection pool.")
 
