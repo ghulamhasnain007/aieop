@@ -45,6 +45,7 @@ class GitHubAdapter(BaseIntegration):
     def retrieve(self, resource: str, **filters) -> list[dict[str, Any]]:
         """
         resource: "pull_requests" | "commits" | "repository" | "workflow_runs"
+                  | "issues" | "readme"
         filters must include repo="owner/name"
         """
         repo = filters.get("repo")
@@ -79,6 +80,27 @@ class GitHubAdapter(BaseIntegration):
                 )
                 resp.raise_for_status()
                 return resp.json().get("workflow_runs", [])
+            elif resource == "issues":
+                resp = httpx.get(
+                    f"{self.API_BASE}/repos/{repo}/issues",
+                    headers=self._headers(),
+                    params={"state": filters.get("state", "all"), "per_page": filters.get("limit", 30)},
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                # GitHub's /issues endpoint also returns pull requests (they
+                # carry a "pull_request" key) - filter those out, PRs come
+                # from the "pull_requests" resource above instead.
+                return [obj for obj in resp.json() if "pull_request" not in obj]
+            elif resource == "readme":
+                resp = httpx.get(f"{self.API_BASE}/repos/{repo}/readme", headers=self._headers(), timeout=15)
+                if resp.status_code == 404:
+                    return []
+                resp.raise_for_status()
+                data = resp.json()
+                import base64
+                content = base64.b64decode(data.get("content", "")).decode("utf-8", errors="replace")
+                return [{"path": data.get("path", "README"), "content": content}]
             else:
                 raise IntegrationError(f"Unknown resource '{resource}' for GitHubAdapter")
 
@@ -86,6 +108,17 @@ class GitHubAdapter(BaseIntegration):
             return resp.json()
         except httpx.HTTPError as exc:
             raise IntegrationError(f"GitHub API request failed: {exc}") from exc
+
+    @staticmethod
+    def _infer_priority_from_labels(labels: list) -> str | None:
+        names = [
+            (label.get("name") if isinstance(label, dict) else str(label)).lower()
+            for label in (labels or [])
+        ]
+        for level in ("critical", "urgent", "high", "medium", "low"):
+            if any(level in name for name in names):
+                return level
+        return None
 
     def normalize(self, raw_objects: list[dict[str, Any]]) -> list[dict[str, Any]]:
         normalized = []
@@ -108,7 +141,7 @@ class GitHubAdapter(BaseIntegration):
                     "message": obj.get("commit", {}).get("message"),
                     "committed_at": (obj.get("commit", {}).get("author") or {}).get("date"),
                 })
-            elif "number" in obj and "pull_request" not in obj:  # PR object
+            elif "head" in obj and "number" in obj:  # true PR object (from /pulls - has head/base branch info)
                 normalized.append({
                     "entity_type": "pull_request",
                     "external_id": str(obj["number"]),
@@ -119,6 +152,19 @@ class GitHubAdapter(BaseIntegration):
                     "merged_at": obj.get("merged_at"),
                     "additions": obj.get("additions"),
                     "deletions": obj.get("deletions"),
+                })
+            elif "number" in obj:  # Issue object (from /issues, PRs already filtered out in retrieve())
+                milestone = obj.get("milestone") or {}
+                normalized.append({
+                    "entity_type": "issue",
+                    "external_id": str(obj["number"]),
+                    "title": obj.get("title"),
+                    "status": obj.get("state"),  # "open" / "closed"
+                    "assignee": (obj.get("assignee") or {}).get("login"),
+                    "priority": self._infer_priority_from_labels(obj.get("labels")),
+                    "sprint": milestone.get("title"),
+                    "due_date": milestone.get("due_on"),
+                    "created_at": obj.get("created_at"),
                 })
         return normalized
 

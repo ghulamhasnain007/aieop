@@ -114,7 +114,7 @@ class Issue(Base):
     __tablename__ = "issues"
     id = Column(String, primary_key=True, default=gen_id)
     project_id = Column(String, ForeignKey("projects.id"), nullable=False)
-    provider = Column(String, nullable=False)  # "jira" / "taiga"
+    provider = Column(String, nullable=False)  # "github" (sole provider currently)
     external_id = Column(String, nullable=False)
     title = Column(String, nullable=False)
     status = Column(String, nullable=True)
@@ -222,7 +222,7 @@ class Conversation(Base):
     id = Column(String, primary_key=True, default=gen_id)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     project_id = Column(String, ForeignKey("projects.id"), nullable=True)
-    channel = Column(String, nullable=True)  # "dashboard" / "discord" / "slack"
+    channel = Column(String, nullable=True)  # "dashboard" (GitHub-only focus - no chat integrations currently)
     role = Column(String, nullable=False)  # "user" / "assistant"
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

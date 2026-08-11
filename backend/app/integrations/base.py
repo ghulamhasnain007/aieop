@@ -1,7 +1,7 @@
 """
 BaseIntegration (FR-004).
 
-Every external system (GitHub, Jira/Taiga, Discord/Slack, GitHub Actions,
+Every external system (GitHub, GitHub Actions, ...) implements this same
 monitoring, docs) implements this same interface: authenticate, retrieve,
 normalize, get_events, execute_action, health_check. Adapters self-register
 into ADAPTER_REGISTRY on import so the Coordinator/dashboard can enumerate

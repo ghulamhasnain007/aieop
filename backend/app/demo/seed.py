@@ -112,7 +112,7 @@ def seed_demo_project(db: Session) -> dict:
     for i, (status, priority) in enumerate(statuses_priorities):
         due = datetime.utcnow() - timedelta(days=1) if (status == "open" and i == 4) else None
         db.add(Issue(
-            project_id=project.id, provider="taiga", external_id=str(i + 1),
+            project_id=project.id, provider="github", external_id=str(i + 1),
             title=[
                 "Fix payment timeout handling", "Add retry logic to gateway",
                 "Update API documentation", "Migrate to new auth provider",

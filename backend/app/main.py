@@ -8,7 +8,7 @@ from app import integrations  # noqa: F401  - triggers adapter self-registration
 from app.api import (
     routes_chat, routes_integrations, routes_projects, routes_health,
     routes_actions, routes_knowledge, routes_predictions, routes_events, routes_auth,
-    routes_intelligence, routes_incidents, routes_services, routes_demo,
+    routes_intelligence, routes_incidents, routes_services, routes_demo, routes_github,
 )
 
 app = FastAPI(title=settings.app_name)
@@ -47,3 +47,4 @@ app.include_router(routes_intelligence.router)
 app.include_router(routes_incidents.router)
 app.include_router(routes_services.router)
 app.include_router(routes_demo.router)
+app.include_router(routes_github.router)
